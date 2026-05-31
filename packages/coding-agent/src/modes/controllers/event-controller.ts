@@ -610,7 +610,12 @@ export class EventController {
 					: event.reason === "idle"
 						? "Idle "
 						: "";
-		const actionLabel = event.action === "handoff" ? "Auto-handoff" : "Auto context-full maintenance";
+		const actionLabel =
+			event.action === "handoff"
+				? "Auto-handoff"
+				: event.action === "algorithmic"
+					? "Auto algorithmic compaction"
+					: "Auto context-full maintenance";
 		this.ctx.autoCompactionLoader = new Loader(
 			this.ctx.ui,
 			spinner => theme.fg("accent", spinner),
@@ -633,9 +638,15 @@ export class EventController {
 			this.ctx.autoCompactionLoader = undefined;
 			this.ctx.statusContainer.clear();
 		}
+		const actionStatusLabel =
+			event.action === "handoff"
+				? "Auto-handoff"
+				: event.action === "algorithmic"
+					? "Auto algorithmic compaction"
+					: "Auto context-full maintenance";
 		const isHandoffAction = event.action === "handoff";
 		if (event.aborted) {
-			this.ctx.showStatus(isHandoffAction ? "Auto-handoff cancelled" : "Auto context-full maintenance cancelled");
+			this.ctx.showStatus(`${actionStatusLabel} cancelled`);
 		} else if (event.result) {
 			this.ctx.rebuildChatFromMessages();
 			this.ctx.statusLine.invalidate();
@@ -653,7 +664,7 @@ export class EventController {
 			// Benign skip: no model selected, no candidate models available, or nothing
 			// to compact yet. Not a failure — suppress the warning.
 		} else {
-			this.ctx.showWarning("Auto context-full maintenance failed; continuing without maintenance");
+			this.ctx.showWarning(`${actionStatusLabel} failed; continuing without maintenance`);
 		}
 		await this.ctx.flushCompactionQueue({ willRetry: event.willRetry });
 		this.ctx.ui.requestRender();

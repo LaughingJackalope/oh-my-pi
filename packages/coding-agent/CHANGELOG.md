@@ -6,6 +6,7 @@
 - Added search support for virtual internal URLs (including `omp://` roots) by resolving and scanning in-memory internal resources as search targets alongside filesystem paths
 - Added expansion of virtual internal URL search targets so `search` can match multiple internal documents when given `omp://`
 - Added `/omfg <complaint>` slash command that drafts a TTSR rule from a complaint, validates it against the current conversation, saves it to project or `~/.omp/agent/rules`, and registers it live.
+- Added `compaction.strategy=algorithmic`, exposing the deterministic algorithmic compaction provider derived from the MIT-licensed pi-vcc/pi-observational-memory/pi-blackhole lineage ([#1565](https://github.com/can1357/oh-my-pi/issues/1565)).
 
 ### Changed
 

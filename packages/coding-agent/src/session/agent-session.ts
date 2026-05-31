@@ -41,6 +41,7 @@ import {
 	calculatePromptTokens,
 	collectEntriesForBranchSummary,
 	compact,
+	compactAlgorithmically,
 	estimateTokens,
 	generateBranchSummary,
 	generateHandoff,
@@ -228,11 +229,11 @@ export type AgentSessionEvent =
 	| {
 			type: "auto_compaction_start";
 			reason: "threshold" | "overflow" | "idle" | "incomplete";
-			action: "context-full" | "handoff";
+			action: "context-full" | "algorithmic" | "handoff";
 	  }
 	| {
 			type: "auto_compaction_end";
-			action: "context-full" | "handoff";
+			action: "context-full" | "algorithmic" | "handoff";
 			result: CompactionResult | undefined;
 			aborted: boolean;
 			willRetry: boolean;
@@ -5646,11 +5647,11 @@ export class AgentSession {
 		this.#compactionAbortController = compactionAbortController;
 
 		try {
-			if (!this.model) {
+			const compactionSettings = this.settings.getGroup("compaction");
+			const usesAlgorithmicCompaction = compactionSettings.strategy === "algorithmic";
+			if (!usesAlgorithmicCompaction && !this.model) {
 				throw new Error("No model selected");
 			}
-
-			const compactionSettings = this.settings.getGroup("compaction");
 			const pathEntries = this.sessionManager.getBranch();
 			const preparation = prepareCompaction(pathEntries, compactionSettings);
 			if (!preparation) {
@@ -5700,6 +5701,18 @@ export class AgentSession {
 				tokensBefore = compactionPrep.tokensBefore;
 				details = compactionPrep.details;
 				preserveData = compactionPrep.preserveData;
+			} else if (usesAlgorithmicCompaction) {
+				const result = compactAlgorithmically(preparation, {
+					customInstructions,
+					extraContext: compactionPrep.hookContext,
+					preserveData: compactionPrep.preserveData,
+				});
+				summary = result.summary;
+				shortSummary = result.shortSummary;
+				firstKeptEntryId = result.firstKeptEntryId;
+				tokensBefore = result.tokensBefore;
+				details = result.details;
+				preserveData = result.preserveData;
 			} else {
 				// Generate compaction result. Only convert known abort-shaped
 				// rejections (AbortError raised while the abort signal is set,
@@ -6864,11 +6877,16 @@ export class AgentSession {
 			return true;
 		}
 
-		// "overflow" forces context-full because the input itself is broken — a handoff
-		// LLM call would hit the same overflow. "incomplete" is an output-side problem,
-		// so a handoff request on the existing context is still viable.
-		let action: "context-full" | "handoff" =
-			compactionSettings.strategy === "handoff" && reason !== "overflow" ? "handoff" : "context-full";
+		// "overflow" forces in-session maintenance because a handoff LLM call would
+		// hit the same overflow. Algorithmic compaction is also in-session but does
+		// not require a model.
+		const usesAlgorithmicCompaction = compactionSettings.strategy === "algorithmic";
+		let action: "context-full" | "algorithmic" | "handoff" =
+			compactionSettings.strategy === "handoff" && reason !== "overflow"
+				? "handoff"
+				: usesAlgorithmicCompaction
+					? "algorithmic"
+					: "context-full";
 		await this.#emitSessionEvent({ type: "auto_compaction_start", reason, action });
 		// Abort any older auto-compaction before installing this run's controller.
 		this.#autoCompactionAbortController?.abort();
@@ -6915,20 +6933,7 @@ export class AgentSession {
 				}
 			}
 
-			if (!this.model) {
-				await this.#emitSessionEvent({
-					type: "auto_compaction_end",
-					action,
-					result: undefined,
-					aborted: false,
-					willRetry: false,
-					skipped: true,
-				});
-				return false;
-			}
-
-			const availableModels = this.#modelRegistry.getAvailable();
-			if (availableModels.length === 0) {
+			if (!usesAlgorithmicCompaction && !this.model) {
 				await this.#emitSessionEvent({
 					type: "auto_compaction_end",
 					action,
@@ -7007,7 +7012,31 @@ export class AgentSession {
 				tokensBefore = compactionPrep.tokensBefore;
 				details = compactionPrep.details;
 				preserveData = compactionPrep.preserveData;
+			} else if (usesAlgorithmicCompaction) {
+				const result = compactAlgorithmically(preparation, {
+					extraContext: compactionPrep.hookContext,
+					preserveData: compactionPrep.preserveData,
+				});
+				summary = result.summary;
+				shortSummary = result.shortSummary;
+				firstKeptEntryId = result.firstKeptEntryId;
+				tokensBefore = result.tokensBefore;
+				details = result.details;
+				preserveData = result.preserveData;
 			} else {
+				const availableModels = this.#modelRegistry.getAvailable();
+				if (availableModels.length === 0) {
+					await this.#emitSessionEvent({
+						type: "auto_compaction_end",
+						action,
+						result: undefined,
+						aborted: false,
+						willRetry: false,
+						skipped: true,
+					});
+					return false;
+				}
+
 				const candidates = this.#getCompactionModelCandidates(availableModels);
 				const retrySettings = this.settings.getGroup("retry");
 				const telemetry = resolveTelemetry(this.agent.telemetry, this.sessionId);

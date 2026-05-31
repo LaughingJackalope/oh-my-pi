@@ -2,6 +2,7 @@
  * Compaction and summarization utilities.
  */
 
+export * from "./algorithmic";
 export * from "./branch-summarization";
 export * from "./compaction";
 export * from "./entries";

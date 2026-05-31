@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+
+- Added a deterministic algorithmic compaction provider derived from the MIT-licensed pi-vcc/pi-observational-memory/pi-blackhole lineage, rewritten for omp's compaction preparation model ([#1565](https://github.com/can1357/oh-my-pi/issues/1565)).
 
 ## [15.5.15] - 2026-05-30
 ### Added

@@ -101,11 +101,11 @@ export type CustomToolSessionEvent =
 	| {
 			reason: "auto_compaction_start";
 			trigger: "threshold" | "overflow" | "idle" | "incomplete";
-			action: "context-full" | "handoff";
+			action: "context-full" | "algorithmic" | "handoff";
 	  }
 	| {
 			reason: "auto_compaction_end";
-			action: "context-full" | "handoff";
+			action: "context-full" | "algorithmic" | "handoff";
 			result: CompactionResult | undefined;
 			aborted: boolean;
 			willRetry: boolean;

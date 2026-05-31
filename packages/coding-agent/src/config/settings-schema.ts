@@ -1136,17 +1136,22 @@ export const SETTINGS_SCHEMA = {
 
 	"compaction.strategy": {
 		type: "enum",
-		values: ["context-full", "handoff", "off"] as const,
+		values: ["context-full", "algorithmic", "handoff", "off"] as const,
 		default: "context-full",
 		ui: {
 			tab: "context",
 			label: "Compaction Strategy",
-			description: "Choose in-place context-full maintenance, auto-handoff, or disable auto maintenance (off)",
+			description: "Choose LLM context-full maintenance, deterministic algorithmic compaction, auto-handoff, or disable auto maintenance (off)",
 			options: [
 				{
 					value: "context-full",
 					label: "Context-full",
-					description: "Summarize in-place and keep the current session",
+					description: "Summarize in-place with the selected model and keep the current session",
+				},
+				{
+					value: "algorithmic",
+					label: "Algorithmic",
+					description: "Deterministically build a structured in-place summary without an LLM call",
 				},
 				{ value: "handoff", label: "Handoff", description: "Generate handoff and continue in a new session" },
 				{
@@ -3292,7 +3297,7 @@ export type TreeFilterMode = SettingValue<"treeFilterMode">;
 
 export interface CompactionSettings {
 	enabled: boolean;
-	strategy: "context-full" | "handoff" | "off";
+	strategy: "context-full" | "algorithmic" | "handoff" | "off";
 	thresholdPercent: number;
 	thresholdTokens: number;
 	reserveTokens: number;
