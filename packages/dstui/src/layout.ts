@@ -57,8 +57,25 @@ export type ViewLookup = (name: string) =>
 
 const TAB_REPLACEMENT = "   ";
 
+// C0 (U+0000-U+001F, drop \t which is already expanded) and DEL/U+007F-U+009F.
+const CONTROL_CHARS = /[\u0000-\u0008\u000a-\u001f\u007f-\u009f]+/g;
+
+/**
+ * Drop ANSI escape sequences and remaining C0/C1 controls so DSL text and
+ * config strings cannot inject SGR/CSI/OSC bytes into the rendered grid.
+ * Tabs are pre-expanded to spaces; nothing else is preserved verbatim.
+ */
+function sanitizeText(text: string): string {
+	if (text.length === 0) return text;
+	const expanded = text.indexOf("\t") === -1 ? text : text.replaceAll("\t", TAB_REPLACEMENT);
+	const stripped = Bun.stripANSI(expanded);
+	if (stripped.indexOf("\u001b") === -1 && !CONTROL_CHARS.test(stripped)) return stripped;
+	CONTROL_CHARS.lastIndex = 0;
+	return stripped.replace(/\u001b/g, "").replace(CONTROL_CHARS, "");
+}
+
 function oneColumnText(text: string): string {
-	for (const char of expandTabsInText(text)) {
+	for (const char of sanitizeText(text)) {
 		if (Bun.stringWidth(char) === 1) return char;
 	}
 	return " ";
@@ -72,11 +89,6 @@ function wideCell(char: string, style?: unknown): Cell {
 	return { char, style };
 }
 
-function expandTabsInText(text: string): string {
-	if (text.indexOf("\t") === -1) return text;
-	return text.replaceAll("\t", TAB_REPLACEMENT);
-}
-
 function blankRow(width: number): Cell[] {
 	const out: Cell[] = new Array(width);
 	for (let i = 0; i < width; i++) out[i] = cell(" ");
@@ -85,7 +97,7 @@ function blankRow(width: number): Cell[] {
 
 function textCells(text: string, style?: unknown, maxCols = Number.POSITIVE_INFINITY): Cell[] {
 	const out: Cell[] = [];
-	for (const char of expandTabsInText(text)) {
+	for (const char of sanitizeText(text)) {
 		const width = Bun.stringWidth(char);
 		if (width <= 0) {
 			const last = out[out.length - 1];

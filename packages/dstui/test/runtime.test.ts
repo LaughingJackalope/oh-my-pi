@@ -211,6 +211,20 @@ describe("render", () => {
 		expect(Bun.stringWidth(line)).toBeLessThanOrEqual(5);
 		instance.dispose();
 	});
+	test("DSL text strips ANSI/control sequences from output", () => {
+		const module = compileModule(`
+			(defcomponent t (label)
+				(view (text label)))
+		`);
+		const hostile = "\u001b[31malert\u001b[0m\u0007\u0008\u001b]0;title\u0007ok";
+		const instance = instantiate(module.components[0], { label: hostile }, module.views);
+		const line = instance.render(40)[0] ?? "";
+		expect(line).toBe("alertok");
+		expect(line.includes("\u001b")).toBe(false);
+		expect(line.includes("\u0007")).toBe(false);
+		expect(line.includes("\u0008")).toBe(false);
+		instance.dispose();
+	});
 
 	test("output rows are capped by maxOutputRows", () => {
 		const module = compileModule(`
