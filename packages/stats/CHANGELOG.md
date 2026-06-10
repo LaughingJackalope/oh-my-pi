@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed bundled `omp stats` installs treating the published `dist/client` assets as rebuildable source and crashing before the dashboard server starts. ([#2254](https://github.com/can1357/oh-my-pi/issues/2254))
+
 ## [15.10.11] - 2026-06-10
 
 ### Changed

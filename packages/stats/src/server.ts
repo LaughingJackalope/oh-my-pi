@@ -83,6 +83,22 @@ async function getCompiledClientDir(): Promise<string> {
 	return compiledClientDirPromise;
 }
 
+async function isDirectory(dir: string): Promise<boolean> {
+	try {
+		return (await fs.stat(dir)).isDirectory();
+	} catch {
+		return false;
+	}
+}
+
+async function isFile(filePath: string): Promise<boolean> {
+	try {
+		return (await fs.stat(filePath)).isFile();
+	} catch {
+		return false;
+	}
+}
+
 async function getLatestMtime(dir: string): Promise<number> {
 	const entries = await fs.readdir(dir, { withFileTypes: true });
 
@@ -111,6 +127,13 @@ const ensureClientBuild = async () => {
 	if (IS_BUN_COMPILED) return;
 	const indexPath = path.join(STATIC_DIR, "index.html");
 	const cssPath = path.join(STATIC_DIR, "styles.css");
+	if (CLIENT_DIR === STATIC_DIR) {
+		if ((await isFile(indexPath)) && (await isFile(cssPath))) return;
+		throw new Error(`Bundled stats client assets missing at ${STATIC_DIR}. Rebuild the CLI package.`);
+	}
+	if (!(await isDirectory(CLIENT_DIR))) {
+		throw new Error(`Stats client source directory missing at ${CLIENT_DIR}. Rebuild the stats package.`);
+	}
 	const clientSourceMtime = await getLatestMtime(CLIENT_DIR);
 	const tailwindConfigPath = path.join(import.meta.dir, "..", "tailwind.config.js");
 	let tailwindConfigMtime = 0;

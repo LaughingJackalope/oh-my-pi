@@ -5,13 +5,16 @@ import * as path from "node:path";
 import { isEnoent } from "@oh-my-pi/pi-utils";
 
 const packageDir = path.join(import.meta.dir, "..");
+const statsPackageDir = path.join(packageDir, "..", "stats");
 const outDir = path.join(packageDir, "dist");
 const cliPath = path.join(outDir, "cli.js");
+const statsClientDir = path.join(statsPackageDir, "dist", "client");
+const bundledClientDir = path.join(outDir, "client");
 const shebang = "#!/usr/bin/env bun\n";
 
-async function runCommand(command: string[]): Promise<void> {
+async function runCommand(command: string[], cwd = packageDir): Promise<void> {
 	const proc = Bun.spawn(command, {
-		cwd: packageDir,
+		cwd,
 		stdout: "inherit",
 		stderr: "inherit",
 	});
@@ -33,7 +36,8 @@ function formatBytes(bytes: number): string {
 
 async function cleanBundleOutputs(): Promise<void> {
 	// dist/ is shared with the dev binary (dist/omp); only remove this
-	// script's own outputs (entry bundle + copied native assets).
+	// script's own outputs (entry bundle, copied native assets, and copied
+	// stats dashboard client assets).
 	let entries: string[];
 	try {
 		entries = await fs.readdir(outDir);
@@ -43,14 +47,22 @@ async function cleanBundleOutputs(): Promise<void> {
 	}
 	await Promise.all(
 		entries
-			.filter(entry => entry === "cli.js" || entry.endsWith(".node") || entry.endsWith(".js.map"))
-			.map(entry => fs.rm(path.join(outDir, entry), { force: true })),
+			.filter(
+				entry => entry === "client" || entry === "cli.js" || entry.endsWith(".node") || entry.endsWith(".js.map"),
+			)
+			.map(entry => fs.rm(path.join(outDir, entry), { recursive: true, force: true })),
 	);
+}
+
+async function copyStatsClientAssets(): Promise<void> {
+	await fs.cp(statsClientDir, bundledClientDir, { recursive: true });
 }
 
 async function main(): Promise<void> {
 	const start = Bun.nanoseconds();
 	await cleanBundleOutputs();
+	await runCommand(["bun", "run", "build"], statsPackageDir);
+	await copyStatsClientAssets();
 	await runCommand([
 		"bun",
 		"build",

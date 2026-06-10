@@ -89,6 +89,7 @@
 	"files": [
 		"src",
 		"dist/cli.js",
+		"dist/client",
 		"dist/*.node",
 		"scripts",
 		"examples",
