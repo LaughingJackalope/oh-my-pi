@@ -109,7 +109,11 @@ You MAY work alone ONLY when ALL of:
 - OR the request is a direct answer/explanation with no code changes
 - OR the user told you to run the command yourself
 
+{{#if batchEnabled}}
 Batch independent work into ONE `{{toolRefs.task}}` call with multiple `tasks[]` entries — subagents share `context` and run concurrently. Sequential `{{toolRefs.task}}` calls or one subagent per file is PROHIBITED unless the steps genuinely depend on each other.
+{{else}}
+Fan out by issuing multiple `{{toolRefs.task}}` calls in the SAME assistant message — they run concurrently. One subagent per file or serializing independent work across turns is PROHIBITED unless the steps genuinely depend on each other.
+{{/if}}
 
 "This is small enough to do alone" is the failure mode this rule exists to prevent. When in doubt, delegate.
 {{/has}}

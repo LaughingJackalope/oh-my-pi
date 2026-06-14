@@ -7146,7 +7146,11 @@ export class AgentSession {
 			return undefined;
 		}
 
-		const eagerTaskReminder = prompt.render(eagerTaskPrompt);
+		// Match the active task schema: when `task.batch` is off the model only sees
+		// the flat `{ agent, ...item }` shape, so the reminder must NOT push it
+		// toward `tasks[]`/`context` (which the validator would then reject).
+		const batchEnabled = this.settings.get("task.batch");
+		const eagerTaskReminder = prompt.render(eagerTaskPrompt, { batchEnabled });
 
 		return {
 			role: "custom",

@@ -165,6 +165,31 @@ describe("AgentSession eager task prelude (#2534)", () => {
 		expect(call?.lastMessageText).toBe("refactor the parser module");
 	});
 
+	it("uses batch-form delegation wording when task.batch is on", async () => {
+		session = await buildSession({ settingsOverlay: { "task.batch": true } });
+
+		await session.prompt("refactor the parser module");
+
+		const reminder = observedCalls[0]?.messageTexts[0] ?? "";
+		// Batch shape `{ agent, context, tasks[] }` is the active schema — steer the model toward it.
+		expect(reminder).toContain("`tasks[]`");
+		expect(reminder).toContain("share `context`");
+	});
+
+	it("uses single-spawn wording when task.batch is off (codex-connector#2 on #2537)", async () => {
+		// `getTaskSchema({ batchEnabled: false })` exposes only the flat `{ agent, ...item }`
+		// shape with no `tasks[]`/`context`. The eager reminder MUST NOT push the model
+		// toward batch fields the validator would then reject.
+		session = await buildSession({ settingsOverlay: { "task.batch": false } });
+
+		await session.prompt("refactor the parser module");
+
+		const reminder = observedCalls[0]?.messageTexts[0] ?? "";
+		expect(reminder).not.toContain("`tasks[]`");
+		expect(reminder).not.toContain("share `context`");
+		expect(reminder).toContain("multiple `task` calls");
+	});
+
 	it("skips the prelude when task.eager is off", async () => {
 		session = await buildSession({ settingsOverlay: { "task.eager": false } });
 

@@ -2154,6 +2154,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				mcpDiscoveryMode: hasDiscoverableTools,
 				mcpDiscoveryServerSummaries: discoverableToolSummary.servers.map(formatDiscoverableToolServerSummary),
 				eagerTasks,
+				// Mirrors the task tool's own schema/description: `task.batch` controls
+				// whether the model sees `{ agent, context, tasks[] }` or the flat
+				// `{ agent, ...item }` shape. The `# Eager Tasks` wording adapts to
+				// match so eager delegation never asks for a shape the schema rejects.
+				batchEnabled: settings.get("task.batch"),
 				secretsEnabled,
 				workspaceTree: workspaceTreePromise,
 				memoryRootEnabled: memoryBackend.id === "local",

@@ -385,6 +385,8 @@ export interface BuildSystemPromptOptions {
 	mcpDiscoveryServerSummaries?: string[];
 	/** Encourage the agent to delegate via tasks unless changes are trivial. */
 	eagerTasks?: boolean;
+	/** Whether the task tool exposes the batch (`tasks[]` + `context`) schema. Controls the `# Eager Tasks` batching wording. Default: false. */
+	batchEnabled?: boolean;
 	/** Rules with alwaysApply=true — their full content is injected into the prompt. */
 	alwaysApplyRules?: AlwaysApplyRule[];
 	/** Whether secret obfuscation is active. When true, explains the redaction format in the prompt. */
@@ -427,6 +429,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		mcpDiscoveryMode = false,
 		mcpDiscoveryServerSummaries = [],
 		eagerTasks = false,
+		batchEnabled = false,
 		secretsEnabled = false,
 		workspaceTree: providedWorkspaceTree,
 		memoryRootEnabled = false,
@@ -610,6 +613,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		hasMCPDiscoveryServers: mcpDiscoveryServerSummaries.length > 0,
 		mcpDiscoveryServerSummaries,
 		eagerTasks,
+		batchEnabled,
 		secretsEnabled,
 		hasMemoryRoot: memoryRootEnabled,
 		hasObsidian: hasObsidian(),
