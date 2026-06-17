@@ -51,6 +51,7 @@ import {
 	iterateWithIdleTimeout,
 } from "../utils/idle-iterator";
 import { parseStreamingJson, parseStreamingJsonThrottled } from "../utils/json-parse";
+import { createPreResponseTimeoutSignal } from "../utils/pre-response-timeout";
 import { createRequestDebugSession, isRequestDebugEnabled, type RequestDebugResponseLog } from "../utils/request-debug";
 import { adaptSchemaForStrict, NO_STRICT, sanitizeSchemaForOpenAIResponses, toolWireSchema } from "../utils/schema";
 import { notifyRawSseEvent } from "../utils/sse-debug";
@@ -3133,29 +3134,25 @@ async function openCodexSseEventStream(
 	// `wrapCodexSseStream` arms a first-event watchdog only after this fetch
 	// resolves (it wraps the SSE generator). With `timeout: false` disabling
 	// Bun's native 300s ceiling, a stalled pre-response request needs its own
-	// watchdog — combine the caller signal with a fresh
-	// `AbortSignal.timeout(firstEventTimeoutMs)` so headers must arrive
-	// within the configured budget (issue #2422).
-	const preResponseWatchdog =
-		firstEventTimeoutMs !== undefined && firstEventTimeoutMs > 0
-			? AbortSignal.timeout(firstEventTimeoutMs)
-			: undefined;
-	const fetchSignal = preResponseWatchdog
-		? signal
-			? AbortSignal.any([signal, preResponseWatchdog])
-			: preResponseWatchdog
-		: signal;
-	const response = await fetchWithRetry(url, {
-		method: "POST",
-		headers,
-		body: JSON.stringify(body),
-		signal: fetchSignal,
-		maxAttempts: CODEX_MAX_RETRIES + 1,
-		defaultDelayMs: attempt => CODEX_RETRY_DELAY_MS * (attempt + 1),
-		maxDelayMs: CODEX_RATE_LIMIT_BUDGET_MS,
-		fetch: fetchOverride,
-		timeout: false,
-	});
+	// watchdog, but that timer must be cleared once headers arrive so it cannot
+	// abort a healthy response body mid-stream.
+	const preResponseTimeout = createPreResponseTimeoutSignal(signal, firstEventTimeoutMs);
+	let response: Response;
+	try {
+		response = await fetchWithRetry(url, {
+			method: "POST",
+			headers,
+			body: JSON.stringify(body),
+			signal: preResponseTimeout.signal,
+			maxAttempts: CODEX_MAX_RETRIES + 1,
+			defaultDelayMs: attempt => CODEX_RETRY_DELAY_MS * (attempt + 1),
+			maxDelayMs: CODEX_RATE_LIMIT_BUDGET_MS,
+			fetch: fetchOverride,
+			timeout: false,
+		});
+	} finally {
+		preResponseTimeout.clear();
+	}
 	logCodexDebug("codex response", {
 		url: response.url,
 		status: response.status,

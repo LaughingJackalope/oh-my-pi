@@ -31,6 +31,7 @@ import { AssistantMessageEventStream } from "../utils/event-stream";
 import { extractGoogleValidationUrl, formatGoogleValidationRequiredMessage } from "../utils/google-validation";
 import { appendRawHttpRequestDumpFor400, type RawHttpRequestDump } from "../utils/http-inspector";
 import { getStreamFirstEventTimeoutMs } from "../utils/idle-iterator";
+import { createPreResponseTimeoutSignal } from "../utils/pre-response-timeout";
 // Refresh is the sole responsibility of AuthStorage (broker-aware, single-flighted);
 // the stream provider trusts the access token threaded through `options.apiKey`.
 import { normalizeSchemaForCCA } from "../utils/schema";
@@ -451,22 +452,13 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 				headers: requestHeaders,
 			};
 
-			// Direct callers that skip `register-builtins` (which installs the
+			// Direct callers that bypass `register-builtins` (which installs the
 			// iterator-level watchdog) need a pre-response timer alongside
 			// `timeout: false`; otherwise a stalled Cloud Code Assist proxy
-			// would hang forever. Floor matches the lazy wrapper's 5min default.
+			// would hang forever. Clear that timer once headers arrive so active
+			// long streams are governed by the iterator-level idle watchdog.
 			const firstEventTimeoutMs =
 				options?.streamFirstEventTimeoutMs ?? getStreamFirstEventTimeoutMs(undefined, 300_000);
-			const preResponseWatchdog =
-				firstEventTimeoutMs !== undefined && firstEventTimeoutMs > 0
-					? AbortSignal.timeout(firstEventTimeoutMs)
-					: undefined;
-			const callerSignal = options?.signal;
-			const fetchSignal = preResponseWatchdog
-				? callerSignal
-					? AbortSignal.any([callerSignal, preResponseWatchdog])
-					: preResponseWatchdog
-				: callerSignal;
 
 			let started = false;
 			let sawFinishReason = false;
@@ -665,17 +657,23 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 					started = false;
 					resetOutput();
 
-					const response = await fetchWithRetry(() => `${endpoint}/v1internal:streamGenerateContent?alt=sse`, {
-						method: "POST",
-						headers: requestHeaders,
-						body: requestBodyJson,
-						signal: fetchSignal,
-						maxAttempts: isLastEndpoint ? MAX_RETRIES + 1 : 1,
-						defaultDelayMs: attempt => BASE_DELAY_MS * 2 ** attempt,
-						maxDelayMs: options?.maxRetryDelayMs ?? RATE_LIMIT_BUDGET_MS,
-						fetch: options?.fetch,
-						timeout: false,
-					});
+					const preResponseTimeout = createPreResponseTimeoutSignal(options?.signal, firstEventTimeoutMs);
+					let response: Response;
+					try {
+						response = await fetchWithRetry(() => `${endpoint}/v1internal:streamGenerateContent?alt=sse`, {
+							method: "POST",
+							headers: requestHeaders,
+							body: requestBodyJson,
+							signal: preResponseTimeout.signal,
+							maxAttempts: isLastEndpoint ? MAX_RETRIES + 1 : 1,
+							defaultDelayMs: attempt => BASE_DELAY_MS * 2 ** attempt,
+							maxDelayMs: options?.maxRetryDelayMs ?? RATE_LIMIT_BUDGET_MS,
+							fetch: options?.fetch,
+							timeout: false,
+						});
+					} finally {
+						preResponseTimeout.clear();
+					}
 
 					if (!response.ok) {
 						if (response.status === 429 || (response.status >= 500 && response.status < 600)) {

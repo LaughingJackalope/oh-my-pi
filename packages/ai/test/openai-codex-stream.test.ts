@@ -148,6 +148,78 @@ function createNoProgressCodexSse(signal: AbortSignal | undefined): Response {
 	return new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } });
 }
 
+function createSlowActiveCodexSse(signal: AbortSignal | undefined): Response {
+	const encoder = new TextEncoder();
+	const text = "Long active stream completed";
+	const deltas = ["Long ", "active ", "stream ", "completed"];
+	const events: Record<string, unknown>[] = [
+		{ type: "response.created", response: { id: "resp_active" } },
+		{
+			type: "response.output_item.added",
+			item: { type: "message", id: "msg_active", role: "assistant", status: "in_progress", content: [] },
+		},
+		{ type: "response.content_part.added", part: { type: "output_text", text: "" } },
+		...deltas.map(delta => ({ type: "response.output_text.delta", delta })),
+		{
+			type: "response.output_item.done",
+			item: {
+				type: "message",
+				id: "msg_active",
+				role: "assistant",
+				status: "completed",
+				content: [{ type: "output_text", text }],
+			},
+		},
+		{
+			type: "response.completed",
+			response: {
+				id: "resp_active",
+				status: "completed",
+				usage: DEFAULT_USAGE,
+			},
+		},
+	];
+
+	let timer: NodeJS.Timeout | undefined;
+	let abortListener: (() => void) | undefined;
+	let closed = false;
+	const cleanup = () => {
+		closed = true;
+		if (timer) clearTimeout(timer);
+		if (abortListener) signal?.removeEventListener("abort", abortListener);
+	};
+	const encode = (event: unknown): Uint8Array => encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
+	const stream = new ReadableStream<Uint8Array>({
+		start(controller) {
+			let index = 0;
+			const enqueueNext = () => {
+				if (closed) return;
+				if (index >= events.length) {
+					cleanup();
+					controller.close();
+					return;
+				}
+				controller.enqueue(encode(events[index++]));
+				timer = setTimeout(enqueueNext, 3);
+			};
+			abortListener = () => {
+				cleanup();
+				controller.error(new Error("pre-response timeout aborted active stream"));
+			};
+			if (signal?.aborted) {
+				queueMicrotask(() => abortListener?.());
+			} else {
+				signal?.addEventListener("abort", abortListener, { once: true });
+				enqueueNext();
+			}
+		},
+		cancel() {
+			cleanup();
+		},
+	});
+	return new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } });
+}
+
 function encodeWebSocketMessage(value: Record<string, unknown>): Uint8Array {
 	return new TextEncoder().encode(JSON.stringify(value));
 }
@@ -702,6 +774,24 @@ describe("openai-codex streaming", () => {
 		const byName = new Map(calls.map(c => [c.name, c] as const));
 		expect(byName.get("newer")?.arguments).toEqual({ input: "id-only-current" });
 		expect(byName.get("older")?.arguments).toEqual({});
+	});
+
+	it("does not let the pre-response timeout abort active SSE bodies", async () => {
+		const token = createCodexTestToken();
+		const context = createCodexTestContext();
+		const fetchMock: FetchImpl = (input: string | URL | Request, init?: RequestInit) =>
+			Promise.resolve(createSlowActiveCodexSse(getRequestSignal(input, init)));
+
+		const model = { ...createCodexTestModel("https://chatgpt.com/backend-api"), preferWebsockets: false };
+		const result = await streamOpenAICodexResponses(model, context, {
+			fetch: fetchMock,
+			apiKey: token,
+			streamFirstEventTimeoutMs: 5,
+			streamIdleTimeoutMs: 25,
+		}).result();
+
+		expect(result.stopReason).toBe("stop");
+		expect(result.content).toEqual([expect.objectContaining({ type: "text", text: "Long active stream completed" })]);
 	});
 
 	it("waits for caller abort when SSE streams only no-progress status events", async () => {

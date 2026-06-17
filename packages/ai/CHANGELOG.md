@@ -16,6 +16,7 @@
 
 ### Fixed
 
+- Fixed pre-response stream watchdogs for Codex, Bedrock, Gemini CLI, and Ollama so the first-event timeout is cleared after response headers arrive instead of aborting long active response bodies. ([#2879](https://github.com/can1357/oh-my-pi/issues/2879))
 - Fixed Gemini usage-tier mapping so `gemini-3.5-flash` is treated as `Flash` and `gemini-3.1-pro` plus `gemini-pro-agent` are treated as `Pro` in usage accounting
 - Fixed Antigravity stream state handling so a request’s `last_execution_id` is committed only after a successful completion and cleared between retry attempts
 - Fixed `streamSimple()` Gemini streams to run through the thinking-loop guard for custom API and pi-native transports, so degenerate `thinking` loops now abort with the same retryable empty-content error path as other Gemini stream paths

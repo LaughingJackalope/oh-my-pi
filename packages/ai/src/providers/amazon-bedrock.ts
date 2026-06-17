@@ -33,6 +33,7 @@ import { AssistantMessageEventStream } from "../utils/event-stream";
 import { appendRawHttpRequestDumpFor400, type RawHttpRequestDump } from "../utils/http-inspector";
 import { getStreamFirstEventTimeoutMs } from "../utils/idle-iterator";
 import { parseStreamingJson, parseStreamingJsonThrottled } from "../utils/json-parse";
+import { createPreResponseTimeoutSignal } from "../utils/pre-response-timeout";
 import { toolWireSchema } from "../utils/schema/wire";
 import { invalidateAwsCredentialCache, resolveAwsCredentials } from "./aws-credentials";
 import { decodeEventStream } from "./aws-eventstream";
@@ -287,26 +288,23 @@ export const streamBedrock: StreamFunction<"bedrock-converse-stream"> = (
 			// configurable watchdogs govern slow-prefill streams (issue #2422).
 			// Direct callers that bypass `register-builtins` (which installs the
 			// iterator-level first-event watchdog) still need a pre-response
-			// timer, otherwise a Bedrock/proxy that accepts the POST and never
-			// sends headers would hang forever.
+			// timer, but it must stop once headers arrive so it cannot abort a
+			// healthy response body mid-stream.
 			const firstEventTimeoutMs = options.streamFirstEventTimeoutMs ?? getStreamFirstEventTimeoutMs();
-			const preResponseWatchdog =
-				firstEventTimeoutMs !== undefined && firstEventTimeoutMs > 0
-					? AbortSignal.timeout(firstEventTimeoutMs)
-					: undefined;
-			const fetchSignal = preResponseWatchdog
-				? options.signal
-					? AbortSignal.any([options.signal, preResponseWatchdog])
-					: preResponseWatchdog
-				: options.signal;
-			const response = await fetchWithRetry(url, {
-				method: "POST",
-				headers: requestHeaders,
-				body,
-				signal: fetchSignal,
-				fetch: options.fetch,
-				timeout: false,
-			});
+			const preResponseTimeout = createPreResponseTimeoutSignal(options.signal, firstEventTimeoutMs);
+			let response: Response;
+			try {
+				response = await fetchWithRetry(url, {
+					method: "POST",
+					headers: requestHeaders,
+					body,
+					signal: preResponseTimeout.signal,
+					fetch: options.fetch,
+					timeout: false,
+				});
+			} finally {
+				preResponseTimeout.clear();
+			}
 
 			if (!response.ok) {
 				if (!bearerToken && (response.status === 401 || response.status === 403)) {

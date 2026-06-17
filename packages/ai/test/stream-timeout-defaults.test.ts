@@ -7,6 +7,7 @@ import {
 	iterateWithIdleTimeout,
 	iterateWithTerminalGrace,
 } from "@oh-my-pi/pi-ai/utils/idle-iterator";
+import { createPreResponseTimeoutSignal } from "@oh-my-pi/pi-ai/utils/pre-response-timeout";
 
 /**
  * Per-provider fallback overrides on the stream-watchdog helpers.
@@ -143,6 +144,29 @@ async function expectRejectsWithMessage(run: () => Promise<void>, message: strin
 	expect(caught).toBeInstanceOf(Error);
 	expect((caught as Error).message).toBe(message);
 }
+
+describe("createPreResponseTimeoutSignal", () => {
+	it("stops the timeout from aborting after headers arrive", async () => {
+		const preResponseTimeout = createPreResponseTimeoutSignal(undefined, 5);
+
+		preResponseTimeout.clear();
+		await Bun.sleep(10);
+
+		expect(preResponseTimeout.signal?.aborted).toBe(false);
+	});
+
+	it("keeps forwarding caller aborts after the timeout is cleared", () => {
+		const caller = new AbortController();
+		const preResponseTimeout = createPreResponseTimeoutSignal(caller.signal, 1_000);
+
+		preResponseTimeout.clear();
+		caller.abort(new Error("caller cancelled"));
+
+		expect(preResponseTimeout.signal?.aborted).toBe(true);
+		expect(preResponseTimeout.signal?.reason).toBeInstanceOf(Error);
+		expect((preResponseTimeout.signal?.reason as Error).message).toBe("caller cancelled");
+	});
+});
 
 describe("iterateWithIdleTimeout", () => {
 	it("does not reset the first-progress deadline for no-progress items", async () => {
