@@ -167,12 +167,12 @@ describe("AgentSession advisor provider-options parity", () => {
 		expect(opts.providerSessionState).toBe(session.providerSessionState);
 	});
 
-	it("roots advisor promptCacheKey in the main agent's providerPromptCacheKey so tan/shared sessions stay on the parent shard", () => {
+	it("reuses the main agent's providerPromptCacheKey unchanged so tan/shared sessions stay on the parent shard", () => {
 		// Regression for codex-connector review on #3640: when the SDK pins
 		// `agent.promptCacheKey` (tan/shared-session callers do this to share
 		// the parent provider cache while keeping a distinct providerSessionId),
-		// the advisor MUST derive its cache key from that pinned value — not
-		// from its own session id — or it cold-misses the parent shard.
+		// the advisor MUST pass that key through unchanged or it cannot read the
+		// exact shard populated by the parent turn.
 		const parentPromptCacheKey = "tan-parent-cache-key";
 		const mainAgent = new Agent({
 			initialState: { model, systemPrompt: ["Test"], tools: [], messages: [] },
@@ -191,9 +191,9 @@ describe("AgentSession advisor provider-options parity", () => {
 		const advisor = session.getAdvisorAgent();
 		if (!advisor) throw new Error("Expected advisor agent to be live");
 
-		// `-advisor` suffix keeps advisor traffic distinguishable from the
-		// parent's live turn while staying rooted in the same shard family.
-		expect(advisor.promptCacheKey).toBe(`${parentPromptCacheKey}-advisor`);
+		// Explicit provider cache keys are shared byte-for-byte with the parent
+		// live turn; only the provider session id stays advisor-scoped.
+		expect(advisor.promptCacheKey).toBe(parentPromptCacheKey);
 		// Session id is still advisor-scoped so credential stickiness and the
 		// advisor's session-keyed telemetry stay distinct from the parent.
 		expect(advisor.sessionId).toMatch(/-advisor$/);

@@ -2035,24 +2035,18 @@ export class AgentSession {
 		// - `providerSessionState` shares Codex websockets / Anthropic fast-mode
 		//   fallback state with the main agent so both turns reuse the same
 		//   transport caches.
-		// - `promptCacheKey` mirrors the main agent's effective cache routing
-		//   (`promptCacheKey ?? sessionId`) with an `-advisor` suffix so:
-		//     • the default session (no `providerPromptCacheKey`) keeps the
-		//       advisor on a stable, advisor-scoped shard across turns; and
-		//     • a tan/shared-session caller that pins `providerPromptCacheKey`
-		//       on the main agent to share the parent shard keeps the advisor
-		//       on that same shard family instead of cold-missing onto the
-		//       advisor's own provider session id.
+		// - `promptCacheKey` preserves an explicitly pinned provider cache key
+		//   unchanged so tan/shared-session advisor calls can read the exact
+		//   shard populated by the parent turn while keeping only `sessionId`
+		//   advisor-scoped; sessions without a pinned key fall back to the
+		//   advisor session id for stable advisor-local caching.
 		// - `transformProviderContext` applies snapcompact, secret obfuscation,
 		//   and image clamping to advisor requests like the main turn.
 		//
 		// Without this parity, OpenRouter advisor calls bypassed the variant
 		// suffix and prompt-cache key and produced inconsistent cache hits
 		// (see can1357/oh-my-pi#3639).
-		const mainEffectivePromptCacheKey = this.agent.promptCacheKey ?? this.agent.sessionId;
-		const advisorPromptCacheKey = mainEffectivePromptCacheKey
-			? `${mainEffectivePromptCacheKey}-advisor`
-			: advisorSessionId;
+		const advisorPromptCacheKey = this.agent.promptCacheKey ?? advisorSessionId;
 		const advisorAgent = new Agent({
 			initialState: {
 				systemPrompt,
