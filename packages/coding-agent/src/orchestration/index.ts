@@ -18,3 +18,4 @@ export type {
 	SupervisorSnapshot,
 	SupervisorEventLog,
 } from "./types";
+export { JsonlEventLog } from "./jsonl-event-log";
