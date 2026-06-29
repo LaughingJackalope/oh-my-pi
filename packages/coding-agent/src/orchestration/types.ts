@@ -120,12 +120,24 @@ export interface SupervisorSnapshot {
 }
 
 /**
+ * Input for event-log append calls (no `ts` field — the log stamps it).
+ * Replaces `Omit<SupervisorEvent, "ts">` because TypeScript cannot
+ * narrow object literals against `Omit` of a discriminated union.
+ */
+export type SupervisorEventInput =
+	| { type: "work_dispatched"; workItemId: string; workerId: string; poolId: string; attempt: number }
+	| { type: "work_completed"; workItemId: string; workerId: string; result: WorkerResult }
+	| { type: "work_failed"; workItemId: string; workerId: string; error: string; attempt: number }
+	| { type: "worker_timeout"; workItemId: string; workerId: string; lastHeartbeat?: number }
+	| { type: "log_compacted"; snapshotSeq: number; finalSeq: number };
+
+/**
  * A consumer interface the Supervisor uses to persist events.
  * Implementations: SQLiteEventLog (Phase 2), NatsEventLog (Phase 3).
  */
 export interface SupervisorEventLog {
 	/** Append an event and return its sequence number. */
-	append(event: Omit<SupervisorEvent, "ts">): Promise<number>;
+	append(event: SupervisorEventInput): Promise<number>;
 	/** Read events with seq > afterSeq, in order. Read tail on boot. */
 	tail(afterSeq: number): Promise<SupervisorEvent[]>;
 	/** Read the latest snapshot if one exists. */

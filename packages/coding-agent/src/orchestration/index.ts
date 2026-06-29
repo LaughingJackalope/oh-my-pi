@@ -9,7 +9,7 @@ export {
 	executeToolViaOrchestrator,
 	type OrchestratorToolBridgeOptions,
 	type OrchestratorInvokeResult,
-} from "../orchestrator-tool-bridge";
+} from "./orchestrator-tool-bridge";
 export type {
 	WorkItem,
 	WorkerResult,
