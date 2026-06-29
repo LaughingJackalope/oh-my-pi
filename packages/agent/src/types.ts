@@ -688,10 +688,27 @@ export interface AgentContext {
 export type AgentEvent =
 	// Agent lifecycle
 	| { type: "agent_start" }
-	| {
+| {
 			type: "agent_end";
 			messages: AgentMessage[];
-			/** Present iff `AgentTelemetryConfig` was supplied on this run. */
+			/**
+			 * Always-on guaranteed usage snapshot for this run. The `cost` and
+			 * `tokens` fields are populated even when no `AgentTelemetryConfig`
+			 * was supplied; when they cannot be computed, `cost.unknown` is true
+			 * and `tokens` is 0. Consumers should treat `cost.unknown` the same as
+			 * a missing `cost` — the difference between "zero" and "unknown" is
+			 * important for billing/retry decisions.
+			 */
+			usage: {
+				readonly inputTokens: number;
+				readonly outputTokens: number;
+				readonly totalTokens: number;
+				readonly cost: {
+					readonly estimatedUsd: number;
+					/** True when the run could not compute a real cost (no pricing, no telemetry config). */
+					readonly unknown?: boolean;
+				};
+			};
 			telemetry?: AgentRunSummary;
 			coverage?: AgentRunCoverage;
 	  }

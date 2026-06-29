@@ -388,12 +388,31 @@ function buildAgentEndEvent(
 	telemetry: AgentTelemetry | undefined,
 	stepCount: number,
 ): Extract<AgentEvent, { type: "agent_end" }> {
-	if (!telemetry) return { type: "agent_end", messages };
+	if (!telemetry) {
+		return {
+			type: "agent_end",
+			messages,
+			usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, cost: { estimatedUsd: 0, unknown: true } },
+		};
+	}
 	const snapshot = telemetry.collector.snapshot({ stepCount });
 	if (telemetry.collector.markRunEnded()) {
 		fireOnRunEnd(telemetry, snapshot.summary, snapshot.coverage);
 	}
-	return { type: "agent_end", messages, telemetry: snapshot.summary, coverage: snapshot.coverage };
+	const u = snapshot.summary.usage;
+	const c = snapshot.summary.cost;
+	return {
+		type: "agent_end",
+		messages,
+		usage: {
+			inputTokens: u.inputTokens,
+			outputTokens: u.outputTokens,
+			totalTokens: u.totalTokens,
+			cost: { estimatedUsd: c.estimatedUsd },
+		},
+		telemetry: snapshot.summary,
+		coverage: snapshot.coverage,
+	};
 }
 /**
  * Push a `turn_end` event and run the awaited per-turn hook when the run is

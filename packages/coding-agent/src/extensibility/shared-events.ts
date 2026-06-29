@@ -191,6 +191,19 @@ export interface AgentStartEvent {
 export interface AgentEndEvent {
 	type: "agent_end";
 	messages: AgentMessage[];
+	/**
+	 * Always-on guaranteed usage snapshot for this run. `cost.unknown` is true
+	 * when no `AgentTelemetryConfig` was supplied.
+	 */
+	usage: {
+		readonly inputTokens: number;
+		readonly outputTokens: number;
+		readonly totalTokens: number;
+		readonly cost: {
+			readonly estimatedUsd: number;
+			readonly unknown?: boolean;
+		};
+	};
 }
 
 /** Fired at the start of each turn */

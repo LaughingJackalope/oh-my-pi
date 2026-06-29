@@ -1302,11 +1302,19 @@ export class Agent {
 				this.#state.error = errorMessage;
 				this.#emit({ type: "message_end", message: errorMsg });
 				this.#emit({ type: "turn_end", message: errorMsg, toolResults: [] });
-				this.#emit({ type: "agent_end", messages: [errorMsg] });
+				this.#emit({
+					type: "agent_end",
+					messages: [errorMsg],
+					usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, cost: { estimatedUsd: 0, unknown: true } },
+				});
 			} else {
 				this.appendMessage(errorMsg);
 				this.#state.error = errorMessage;
-				this.#emit({ type: "agent_end", messages: [errorMsg] });
+				this.#emit({
+					type: "agent_end",
+					messages: [errorMsg],
+					usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, cost: { estimatedUsd: 0, unknown: true } },
+				});
 			}
 		} finally {
 			this.#state.isStreaming = false;
