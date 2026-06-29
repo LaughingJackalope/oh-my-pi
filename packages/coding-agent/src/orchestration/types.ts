@@ -2,8 +2,7 @@
  * Core types for the peer-agent orchestration system.
  */
 
-import type { AgentToolResult } from "@oh-my-pi/pi-agent-core";
-import type { Usage } from "../task/types";
+import type { Usage } from "@oh-my-pi/pi-ai";
 
 /**
  * Status of a WorkItem through its lifecycle.
@@ -49,8 +48,8 @@ export interface WorkItem {
 export interface WorkerResult {
 	/** Final tool-call output. */
 	readonly output: string;
-	/** Token usage for the worker run. */
-	readonly usage: Usage & { cost: { estimatedUsd: number } };
+	/** Token usage for the worker run (from SingleResult.usage). */
+	readonly usage: Usage;
 	/** Wall-clock run duration in ms. */
 	readonly durationMs: number;
 	/** Number of assistant requests (turns) the worker made. */
@@ -107,7 +106,7 @@ export interface SupervisorSnapshot {
 	/** Event-log sequence number captured by this snapshot. */
 	readonly lastSeq: number;
 	/** Currently in-flight or queued work items. */
- readonly inFlight: WorkItem[];
+	readonly inFlight: WorkItem[];
 	/** Work items waiting for a free worker. */
 	readonly queued: WorkItem[];
 	/** Currently registered worker ids and their last heartbeat. */

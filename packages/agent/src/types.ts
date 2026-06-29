@@ -699,7 +699,7 @@ export type AgentEvent =
 			 * a missing `cost` — the difference between "zero" and "unknown" is
 			 * important for billing/retry decisions.
 			 */
-			usage: {
+			usage?: {
 				readonly inputTokens: number;
 				readonly outputTokens: number;
 				readonly totalTokens: number;

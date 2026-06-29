@@ -17,7 +17,7 @@ import type {
 	AgentToolResult,
 	AgentToolUpdateCallback,
 } from "@oh-my-pi/pi-agent-core";
-import type { EventBus } from "../utils/event-bus";
+import type { EventBus } from "./utils/event-bus";
 
 export interface OrchestratorToolBridgeOptions {
 	/** Tool registry to dispatch against. */

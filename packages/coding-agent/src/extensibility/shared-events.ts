@@ -192,10 +192,10 @@ export interface AgentEndEvent {
 	type: "agent_end";
 	messages: AgentMessage[];
 	/**
-	 * Always-on guaranteed usage snapshot for this run. `cost.unknown` is true
-	 * when no `AgentTelemetryConfig` was supplied.
+	 * Guaranteed usage snapshot for this run when the agent loop collected
+	 * provider usage. Optional so error-path and test syntheses remain valid.
 	 */
-	usage: {
+	usage?: {
 		readonly inputTokens: number;
 		readonly outputTokens: number;
 		readonly totalTokens: number;
