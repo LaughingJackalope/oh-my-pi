@@ -18,4 +18,10 @@ export type {
 	SupervisorSnapshot,
 	SupervisorEventLog,
 } from "./types";
+
+export { LocalTransport } from "./local-transport";
+export type { LocalWorker } from "./local-transport";
+export { Supervisor } from "./supervisor";
+export type { SupervisorOptions, SupervisorInit } from "./supervisor";
 export { JsonlEventLog } from "./jsonl-event-log";
+
