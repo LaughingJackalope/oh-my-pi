@@ -77,6 +77,7 @@
         "@agentclientprotocol/sdk": "catalog:",
         "@babel/parser": "catalog:",
         "@mozilla/readability": "catalog:",
+        "@nats-io/transport-node": "3.4.0",
         "@oh-my-pi/hashline": "catalog:",
         "@oh-my-pi/omp-stats": "catalog:",
         "@oh-my-pi/pi-agent-core": "catalog:",
@@ -705,6 +706,14 @@
     "@napi-rs/wasm-tools-win32-ia32-msvc": ["@napi-rs/wasm-tools-win32-ia32-msvc@1.0.1", "", { "os": "win32", "cpu": "ia32" }, "sha512-gXkuYzxQsgkj05Zaq+KQTkHIN83dFAwMcTKa2aQcpYPRImFm2AQzEyLtpXmyCWzJ0F9ZYAOmbSyrNew8/us6bw=="],
 
     "@napi-rs/wasm-tools-win32-x64-msvc": ["@napi-rs/wasm-tools-win32-x64-msvc@1.0.1", "", { "os": "win32", "cpu": "x64" }, "sha512-rEAf05nol3e3eei2sRButmgXP+6ATgm0/38MKhz9Isne82T4rPIMYsCIFj0kOisaGeVwoi2fnm7O9oWp5YVnYQ=="],
+
+    "@nats-io/nats-core": ["@nats-io/nats-core@3.4.0", "", { "dependencies": { "@nats-io/nkeys": "2.0.3", "@nats-io/nuid": "3.0.0" } }, "sha512-QMDM86EUNm+wudlKC67HLar/KHHQUvJGLfb4jbahje3pUk3K9afeck9fwsxBZF0eUFox6T/TA6m/t+lQqf+QsQ=="],
+
+    "@nats-io/nkeys": ["@nats-io/nkeys@2.0.3", "", { "dependencies": { "tweetnacl": "^1.0.3" } }, "sha512-JVt56GuE6Z89KUkI4TXUbSI9fmIfAmk6PMPknijmuL72GcD+UgIomTcRWiNvvJKxA01sBbmIPStqJs5cMRBC3A=="],
+
+    "@nats-io/nuid": ["@nats-io/nuid@3.0.0", "", {}, "sha512-QbXZDrxmYlrn5AD06gYcUTmEHwxn96HBQMIk7XTjDlEcx6FPzVBBPjp4AMRh1lEv6B4iJ6Xb/Uz61JugPXFRQg=="],
+
+    "@nats-io/transport-node": ["@nats-io/transport-node@3.4.0", "", { "dependencies": { "@nats-io/nats-core": "3.4.0", "@nats-io/nkeys": "2.0.3", "@nats-io/nuid": "3.0.0" } }, "sha512-hH7u7ejIBTFEJIZ8rIcMrHJI6wl+HhpO5sVFs1+ppmXa8RuB2+Lh1+UwTzZ5xTNNm1TKcRkYy+2qCV56qp8RxA=="],
 
     "@nodable/entities": ["@nodable/entities@2.2.0", "", {}, "sha512-9uGyhaQavEUMC8AIddIjau4NsnsXhou+j5sBAGojCM1oxmQpVKTWR/9JxABD6UAv12vpIms55fPZKFQEhG6uBg=="],
 
@@ -1397,6 +1406,8 @@
     "turndown": ["turndown@7.2.4", "", { "dependencies": { "@mixmark-io/domino": "^2.2.0" } }, "sha512-I8yFsfRzmzK0WV1pNNOA4A7y4RDfFxPRxb3t+e3ui14qSGOxGtiSP6GjeX+Y6CHb7HYaFj7ECUD7VE5kQMZWGQ=="],
 
     "turndown-plugin-gfm": ["turndown-plugin-gfm@1.0.2", "", {}, "sha512-vwz9tfvF7XN/jE0dGoBei3FXWuvll78ohzCZQuOb+ZjWrs3a0XhQVomJEb2Qh4VHTPNRO4GPZh0V7VRbiWwkRg=="],
+
+    "tweetnacl": ["tweetnacl@1.0.3", "", {}, "sha512-6rt+RN7aOi1nGMyC4Xa5DdYiukl2UWCbcJft7YhxReBGQD7OAM8Pbxw6YMo4r2diNEA8FEmu32YOn9rhaiE5yw=="],
 
     "typanion": ["typanion@3.14.0", "", {}, "sha512-ZW/lVMRabETuYCd9O9ZvMhAh8GslSqaUjxmK/JLPCh6l73CvLBiuXswj/+7LdnWOgYsQ130FqLzFz5aGT4I3Ug=="],
 

@@ -95,9 +95,9 @@ export class Supervisor {
 		await Promise.allSettled([...this.#workers.keys()].map(id => this.#probeWorker(id)));
 	}
 
-	submit(item: Omit<WorkItem, "status" | "attempt"> & { attempt?: number }): DispatchResult {
-		const full: WorkItem = { ...item, attempt: Math.max(1, item.attempt ?? 1), status: "queued" };
-		if (full.maxAttempts < 1) {
+	submit(item: WorkItem): DispatchResult {
+		const full: WorkItem = { ...item, attempt: Math.max(1, item.attempt ?? 1), maxAttempts: item.maxAttempts ?? 3, status: "queued" };
+		if ((full.maxAttempts ?? 0) < 1) {
 			return { workItemId: full.id, reason: "invalid-item", detail: "maxAttempts must be >= 1" };
 		}
 		if (this.#items.has(full.id)) {
@@ -144,13 +144,13 @@ export class Supervisor {
 
 		await this.#log.append({
 			type: "work_dispatched",
-			workItemId: item.id, workerId, poolId: item.poolId, attempt: item.attempt,
+			workItemId: item.id, workerId, poolId: item.poolId, attempt: item.attempt ?? 1,
 		});
 
 		try {
 			const result = await this.#transport.assign({
 				workItemId: item.id, task: item.task,
-				attempt: item.attempt, maxAttempts: item.maxAttempts, metadata: item.metadata,
+				attempt: item.attempt ?? 1, maxAttempts: item.maxAttempts ?? 3, metadata: item.metadata,
 			});
 			session.busy = false;
 			session.currentWorkItemId = undefined;
@@ -162,7 +162,7 @@ export class Supervisor {
 			session.busy = false;
 			session.currentWorkItemId = undefined;
 			this.#inFlight.delete(item.id);
-			await this.#log.append({ type: "work_failed", workItemId: item.id, workerId, error: message, attempt: item.attempt });
+			await this.#log.append({ type: "work_failed", workItemId: item.id, workerId, error: message, attempt: item.attempt ?? 1 });
 			return { workItemId: item.id, workerId, outcome: "failed", error: message, durationMs: Date.now() - assignedAt };
 		}
 	}

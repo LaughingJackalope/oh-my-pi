@@ -24,20 +24,20 @@ export interface WorkItem {
 	readonly id: string;
 	/** Pool this work belongs to. */
 	readonly poolId: string;
-	/** Caller-supplied key for idempotent redeliveries. */
-	readonly correlationId: string;
+	/** Caller-supplied key for idempotent redeliveries. Optional. */
+	readonly correlationId?: string;
 	/** The prompt / input for the worker. */
 	readonly task: string;
 	/** Carry-through metadata (priority, source request id, etc.). */
 	readonly metadata?: Record<string, unknown>;
 	/** Set when the work was dispatched to a worker. */
 	readonly dispatchedAt?: number;
-	/** Current attempt number (1-based). */
-	readonly attempt: number;
-	/** Maximum attempts before dead-lettering. */
-	readonly maxAttempts: number;
-	/** Current lifecycle status. */
-	status: WorkItemStatus;
+	/** Current attempt number (1-based). Default 1. */
+	readonly attempt?: number;
+	/** Maximum attempts before dead-lettering. Default 3. */
+	readonly maxAttempts?: number;
+	/** Current lifecycle status. Default 'queued'. */
+	status?: WorkItemStatus;
 	/** Last failure reason if status is 'failed'. */
 	readonly lastError?: string;
 }

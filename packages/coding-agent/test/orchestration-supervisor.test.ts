@@ -39,7 +39,7 @@ describe("Supervisor", () => {
 	it("runs a single task end-to-end", async () => {
 		const sup = new Supervisor({ log: log(tmp), transport: new FakeTransport() }, { workers: [worker("w1")] });
 		const r = await sup.submit({ id: "t1", poolId: "p1", task: "do X" });
-		expect(r.status).toBe("queued");
+		"status" in r && expect(r.status).toBe("queued");
 		const report = await sup.run();
 		expect(report.totalProcessed).toBe(1);
 		expect(report.completedCount).toBe(1);
@@ -74,8 +74,8 @@ describe("Supervisor", () => {
 		const sup = new Supervisor({ log: log(tmp), transport: new FakeTransport() }, { workers: [worker("w1")] });
 		const r1 = await sup.submit({ id: "dup", poolId: "p1", task: "first" });
 		const r2 = await sup.submit({ id: "dup", poolId: "p1", task: "second" });
-		expect(r1.status).toBe("queued");
-		expect((r2 as { reason?: string }).reason).toBe("invalid-item");
+		expect("status" in r1 ? r1.status : undefined).toBe("queued");
+		expect("reason" in r2 && r2.reason).toBe("invalid-item");
 		await sup.shutdown();
 	});
 

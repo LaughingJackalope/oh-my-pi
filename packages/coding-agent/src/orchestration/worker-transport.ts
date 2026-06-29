@@ -4,6 +4,7 @@
 
 import type { Usage } from "@oh-my-pi/pi-ai";
 import type { WorkerResult } from "./types";
+export type { WorkerResult } from "./types";
 
 export interface WorkerAssignment {
 	workItemId: string;
